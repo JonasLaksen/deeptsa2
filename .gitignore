@@ -1,0 +1,7 @@
+*.swp
+.idea/
+.DS_Store
+__pycache__/
+logs/
+results/
+nohup.out
