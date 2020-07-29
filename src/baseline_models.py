@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.svm import SVR
 
 from src.pretty_print import pretty_print_evaluate
-from src.utils import load_data, evaluate
+from src.utils import load_data, evaluate, transform_from_change_to_price
 
 feature_list = ['price', 'high', 'low', 'open', 'volume', 'direction',
                 'neutral_prop', 'positive_prop', 'negative_prop', 'negative', 'positive', 'neutral',
@@ -110,6 +110,10 @@ def main(y_type):
     y = scaler_y.inverse_transform(y)#[:,:,np.newaxis])
 
     # plot("Baseline model", stock_list, result, y)
+    _, price_train, _, price_val, _, _ = load_data(['prev_price_1'], ['next_price','price'], .8, .1, False)
+    if (y_type[0] == 'next_change'):
+        (_, result),(_, y) = transform_from_change_to_price(np.zeros((15,1328)), result)
+        y_type = [ 'next_price' ]
 
     evaluation = evaluate(result.reshape((result.shape[0], -1)), y.reshape((y.shape[0], -1)), y_type=y_type[0])
     print(evaluation)
@@ -132,7 +136,7 @@ def naive_next_price_using_next_open():
 
 
 
-# main([ 'next_change' ])
+main([ 'next_change' ])
 main([ 'next_price' ])
 # compare_with_model([ 'next_price' ])
 # naive_next_price_using_next_open()

@@ -9,6 +9,11 @@ verify_ssl = true
 graphviz = "*"
 pydot = "*"
 pydot-ng = "*"
+numpy = "*"
+sklearn = "*"
+tensorflow = "*"
+pandas = "*"
+matplotlib = "*"
 
 [requires]
 python_version = "3.7"

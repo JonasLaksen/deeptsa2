@@ -2,14 +2,12 @@ import copy
 import csv
 import json
 from base64 import b64encode, b64decode
-from itertools import combinations
 from zlib import compress, decompress
 
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot
 from sklearn.metrics import mean_absolute_error, mean_squared_error, accuracy_score
-from sklearn.preprocessing import FunctionTransformer
 
 from src.scaler import Scaler
 
@@ -19,7 +17,11 @@ def expand(x): return np.expand_dims(x, axis=0)
 
 def mean_absolute_percentage_error(y_true, y_pred):
     y_true, y_pred = np.array(y_true), np.array(y_pred)
-    return np.mean(np.abs((y_true - y_pred) / (y_true+.00000001))) * 100
+    return np.mean(np.abs((y_true - y_pred) / (y_true + .00000001))) * 100
+
+
+def from_change_to_prices(prices, change):
+    return np.add(prices, change)
 
 
 def evaluate(result, y, y_type='next_change', individual_stocks=True):
@@ -43,15 +45,18 @@ def evaluate(result, y, y_type='next_change', individual_stocks=True):
     return total_evaluation
 
 
-def plot(directory, title, stocklist, graphs, legends=['Predicted', 'True value'], axises=['Day', 'Price $'], ):
-    [plot_one(f'{title}: {stocklist[i]}', [graph[i] for graph in graphs], legends, axises, f'{directory}/{title}-{i}-{graphs[0].shape[1]}.svg') for i in
+def plot(directory, title, stocklist, graphs, legends=['Predicted', 'True value'], axises=['Day', 'Price $'],
+         start_at=0):
+    [plot_one(f'{title}: {stocklist[i]}', [graph[i] for graph in graphs], legends, axises,
+              f'{directory}/{title}-{i}-{start_at}-{graphs[0].shape[1]}.svg', start_at=start_at) for i in
      range(len(graphs[0]))]
 
 
-def plot_one(title, xs, legends, axises, filename=''):
+def plot_one(title, xs, legends, axises, filename='', start_at=0):
     assert len(xs) == len(legends)
     pyplot.title(title)
-    [pyplot.plot(x, label=legends[i]) for i, x in enumerate(xs)]
+    [pyplot.plot(range(start_at, len(x)), x[start_at:],
+                 label=legends[i]) for i, x in enumerate(xs)]
     pyplot.legend(loc='upper left')
     pyplot.xlabel(axises[0])
     pyplot.ylabel(axises[1])
@@ -76,8 +81,9 @@ def mean_direction_eval(result, y, y_type):
 
 def direction_eval(result, y, y_type):
     if y_type == 'next_change':
-        n_same_dir = sum(list(map(lambda x, y: 1 if (x >= 0 and y >= 0) or (x < 0 and y < 0) else 0, result[1:], y[1:])))
-        return n_same_dir / ( len(result)-1 )
+        n_same_dir = sum(
+            list(map(lambda x, y: 1 if (x >= 0 and y >= 0) or (x < 0 and y < 0) else 0, result[1:], y[1:])))
+        return n_same_dir / (len(result) - 1)
 
     result_pair = list(map(lambda x, y: direction_value(x, y), y[:-1], result[1:]))
     y_pair = list(map(lambda x, y: direction_value(x, y), y[:-1], y[1:]))
@@ -201,39 +207,28 @@ def load_data(feature_list, y_features, train_portion, remove_portion_at_end, sh
     y_scaler = Scaler()
     if should_scale_y:
         X_train, X_test = X_scaler.fit_on_training_and_transform_on_training_and_test(X_train, X_test)
-        y_train, y_test = y_scaler.fit_on_training_and_transform_on_training_and_test(y_train, y_test,feature_range=(.5,1))#, feature_range=(-1, 1))
+        y_train, y_test = y_scaler.fit_on_training_and_transform_on_training_and_test(y_train, y_test)
 
     if (X_train.shape[2] != len(feature_list)):
         raise Exception('Lengden er feil')
 
-    return X_train.astype(np.float)[:15,:,:], y_train.astype(np.float)[:15,:,:], \
-           X_test.astype(np.float)[:15,:,:], y_test.astype(np.float)[:15,:,:], \
-           X[:1, 0, 0], \
+    return X_train.astype(np.float)[:15, :, :], y_train.astype(np.float)[:15, :, :], \
+           X_test.astype(np.float)[:15, :, :], y_test.astype(np.float)[:15, :, :], \
+           X[:15, 0, 0], \
            y_scaler
-
-
-trading_features = [['price', 'volume', 'change'], ['open', 'high', 'low'], ['direction']]
-sentiment_features = [['positive', 'negative', 'neutral']]  # , ['positive_prop', 'negative_prop',
-#  'neutral_prop']]  # , ['all_positive', 'all_negative', 'all_neutral']]#, ['all_positive', 'all_negative', 'all_neutral']]
-trendscore_features = [['trendscore']]
-s = trading_features + sentiment_features + trendscore_features
-temp = sum(map(lambda r: list(combinations(s, r)), range(1, len(s) + 1)), [])
-feature_subsets = list(map(lambda x: sum(x, []), temp))
-
-
-def get_features(trading=True, sentiment=True, trendscore=True):
-    list = []
-    if (trading):
-        list.extend(trading_features)
-    if (sentiment):
-        list.extend(sentiment_features)
-    if (trendscore):
-        list.extend(trendscore_features)
-    return sum(list, [])
 
 
 def flatten_list(l):
     return [item for sublist in l for item in sublist]
+
+
+def transform_from_change_to_price(change_train, change_val):
+    _, price_train, _, price_val, _, _ = load_data(['prev_price_1'], ['price', 'next_price'], .8, .1, False)
+    result_train = np.add(price_train[:, :, 0], change_train.reshape(change_train.shape[:2]))
+    result_val = np.add(price_val[:, :, 0], change_val.reshape(change_val.shape[:2]))
+    y_train = price_train[:, :, 1]
+    y_val = price_val[:, :, 1]
+    return (result_train, result_val), (y_train, y_val)
 
 
 def predict_plots(model, X_train, y_train, X_val, y_val, scaler_y, y_type, stocklist, directory, additional_data=[],
@@ -269,6 +264,11 @@ def predict_plots(model, X_train, y_train, X_val, y_val, scaler_y, y_type, stock
     y_train = y_inverse_scaled[:, :training_size, :1].reshape(n_stocks, -1)
     y_val = y_inverse_scaled[:, training_size:, :1].reshape(n_stocks, -1)
 
+    _, price_train, _, price_val, _, _ = load_data(['prev_price_1'], ['price', 'next_price'], .8, .1, False)
+    if (y_type == 'next_change'):
+        (result_train, result_val), (y_train, y_val) = transform_from_change_to_price(result_train, result_val)
+        y_type = 'next_price'
+
     val_evaluation = evaluate(result_val, y_val, y_type)
     train_evaluation = evaluate(result_train, y_train, y_type)
     print('Val: ', val_evaluation)
@@ -278,9 +278,12 @@ def predict_plots(model, X_train, y_train, X_val, y_val, scaler_y, y_type, stock
     from src.baseline_models import naive_model
     naive_predictions, _ = naive_model(y_train, y_val, scaler_y, y_type)
     naive_evaluation = evaluate(naive_predictions.reshape((naive_predictions.shape[0], -1)), y_val, y_type)
-    plot(directory, f'Training', stocklist, [ result_train, y_train ], ['Predicted', 'True value'], ['Day', y_axis_label])
-    plot(directory, 'Validation', stocklist, [ result_val[:,:25], naive_predictions[:,:25], y_val[:,:25] ], ['LSTM','Naive', 'True value'], ['Day', y_axis_label])
-    plot(directory, 'Validation', stocklist, [ result_val, y_val ], ['Predicted', 'True value'], ['Day', y_axis_label])
+    plot(directory, f'Training', stocklist, [result_train, y_train], ['Predicted', 'True value'], ['Day', y_axis_label])
+    [plot(directory, 'Validation', stocklist,
+          [result_val[:, :(i + 1) * 25], naive_predictions[:, :(i + 1) * 25],
+           y_val[:, :(i + 1) * 25]], ['LSTM', 'Naive', 'True value'], ['Day', y_axis_label], start_at=i * 25) for i in
+     range(6)]
+    plot(directory, 'Validation', stocklist, [result_val, y_val], ['Predicted', 'True value'], ['Day', y_axis_label])
     # np.savetxt(f'{directory}/y.txt', y_inverse_scaled.reshape(-1))
     # np.savetxt(f"{directory}/result.txt", results_inverse_scaled.reshape(-1))
     return {'training': train_evaluation, 'validation': val_evaluation, 'naive': naive_evaluation}
