@@ -13,15 +13,18 @@ feature_list = ['price', 'high', 'low', 'open', 'volume', 'direction',
                 'trendscore']
 
 
-def naive_model(y_val, y_test, scaler_y, y_type):
+def naive_model(y_partitions, y_type):
+    y_train, y_val, y_test = y_partitions
+    y = np.concatenate((y_train, y_val, y_test), axis=1)
     if y_type == 'next_price' or y_type == 'next_open':
-        result = np.append(y_val[:, -1:], y_test[:, :-1], axis=1)
+        return (y[:, :1, ],
+                y[:, y_train.shape[1] - 1: y_train.shape[1] + y_val.shape[1] - 1, ],
+                y[:, - y_test.shape[1] - 1:-1, ])
     else:
-        result = scaler_y.transform(np.zeros((y_val.shape[0], y_test.shape[1], 1)))
-        # result = scaler_y.transform(np.full((y_val.shape[0], y_test.shape[1], 1), .1))
-        # result = np.zeros((y_val.shape[0], y_test.shape[1], 1))
-
-    return result, y_test
+        result = np.zeros((y.shape[0], y.shape[1], 1))
+        return (result[:, :y_train.shape[1], :],
+                result[:, y_train.shape[1]:y_train.shape[1] + y_val.shape[1], :],
+                result[:, -y_test.shape[1]:, :])
 
 
 def svm(X_train, X_test, y_train, y_test):
@@ -86,19 +89,11 @@ def gaussian_process(X_train, X_test, y_train, y_test):
     return result, y_test
 
 
-def main(y_type):
+def main(y_type, on_test_set=False):
+    (X_train, X_val, X_test), (y_train, y_val, y_test), _, scaler_y = load_data(feature_list, y_type, False)
 
-    X_train, y_train, X_test, y_test, y_dir, scaler_y = load_data(feature_list, y_type, .8, .1)
-    X = np.append(X_train, X_test, axis=1)
-    y = np.append(y_train, y_test, axis=1)
-    # X, y, y_dir = X[0:1,:], y[0:1,:], y_dir[0:1,:]
-    print(X.shape)
-
-    training_size = X_train.shape[1]
-    X_train, y_train = X[:, :training_size,], y[:, :training_size,]
-    X_test, y_test = X[:, training_size:,], y[:, training_size:,]
-
-    result, y = naive_model(y_train, y_test, scaler_y, y_type[0])
+    (_, result_val, result_test) = naive_model((y_train, y_val, y_test), y_type[0])
+    # result= naive_model(y_train, y_test, scaler_y, y_type[0])
     # result, y = linear_regression(X_train, X_test, y_train[:,:,0], y_test[:,:,0])
     # result, y = ridge_regression(X_train, X_test, y_train, y_test)
 
@@ -106,37 +101,50 @@ def main(y_type):
     # result, y = gaussian_process(X_train, X_val, y_train, y_val)
     # result, y = svm(X_train, X_test, y_train, y_test)
 
-    result = scaler_y.inverse_transform(result)#[:,:,np.newaxis])
-    y = scaler_y.inverse_transform(y)#[:,:,np.newaxis])
+    # result_val = scaler_y.inverse_transform(result_val)
+    # result_test = scaler_y.inverse_transform(result_test)
+
+    # y_val = scaler_y.inverse_transform(y_val)  # [:,:,np.newaxis])
+    # y_test = scaler_y.inverse_transform(y_test)  # [:,:,np.newaxis])
 
     # plot("Baseline model", stock_list, result, y)
-    _, price_train, _, price_val, _, _ = load_data(['prev_price_1'], ['next_price','price'], .8, .1, False)
     if (y_type[0] == 'next_change'):
-        (_, result),(_, y) = transform_from_change_to_price(np.zeros((15,1328)), result)
-        y_type = [ 'next_price' ]
+        (_, result_val, result_test), (_, y_val, y_test) = transform_from_change_to_price(np.zeros(X_train.shape[:2]),
+                                                                                          result_val, result_test)
+        y_type = ['next_price']
 
-    evaluation = evaluate(result.reshape((result.shape[0], -1)), y.reshape((y.shape[0], -1)), y_type=y_type[0])
-    print(evaluation)
-    return result, y
+    evaluation_val = evaluate(result_val.reshape((result_val.shape[0], -1)), y_val.reshape((y_val.shape[0], -1)),
+                              y_type=y_type[0])
+    etestuation_test = evaluate(result_test.reshape((result_test.shape[0], -1)), y_test.reshape((y_test.shape[0], -1)),
+                                y_type=y_type[0])
+    # evaluation_test = evaluate(result_test.reshape((result_test.shape[0], -1)), y_test.reshape((y_test.shape[0], -1)),
+    #                            y_type=y_type[0])
+    print(f'Val: {evaluation_val}')
+    print(f'Test: {etestuation_test}')
+    # print(f'Test: {evaluation_test}')
+    return (result_val, result_val), (y_val, y_val)
+
 
 def compare_with_model(y_types):
     result, y = main(y_types)
-    with open('server_results/context_feature_search.py/2020-07-10_20.29.39/StackedLSTMWithState-160-2020-07-10_20.41.37/evaluation.json') as json_file:
+    with open(
+            'server_results/context_feature_search.py/2020-07-10_20.29.39/StackedLSTMWithState-160-2020-07-10_20.41.37/evaluation.json') as json_file:
         json_content = json.load(json_file)
         context_search_results = json_content['validation']
     evaluation = evaluate(result.reshape((result.shape[0], -1)), y.reshape((y.shape[0], -1)), y_type=y_types[0])
     print(pretty_print_evaluate(evaluation, context_search_results))
 
+
 def naive_next_price_using_next_open():
-    X_train, y_train, X_test, y_test, y_dir, scaler_y = load_data(['next_open'], [ 'next_price' ], .8, .1, should_scale_y=False)
+    X_train, y_train, X_test, y_test, y_dir, scaler_y = load_data(['next_open'], ['next_price'], .8, .1,
+                                                                  should_scale_y=False)
     # X_train, y_train, X_test, y_test, y_dir, scaler_y = load_data(['price'], [ 'next_open' ], .8, .1, should_scale_y=False)
     result = np.concatenate((X_train, X_test), axis=1)
     y = np.concatenate((y_train, y_test), axis=1)
     evaluation = (evaluate(result.reshape((result.shape[0], -1)), y.reshape((y.shape[0], -1)), y_type='next_price'))
 
 
-
-main([ 'next_change' ])
-main([ 'next_price' ])
+main(['next_change'], on_test_set=True)
+main(['next_price'], on_test_set=True)
 # compare_with_model([ 'next_price' ])
 # naive_next_price_using_next_open()

@@ -25,6 +25,14 @@ class Scaler():
         self.scalers = scalers
         return X_train_transformed_arr, X_test_transformed_arr
 
+    def fit(self,X):
+        scalers = []
+        for i in range(X.shape[0]):
+            scaler = MinMaxScaler()
+            scaler.fit(X[i,:,])
+            scalers.append(scaler)
+        self.scalers = scalers
+
     def transform(self, X):
         X_transformed = []
         for i in range(X.shape[0]):

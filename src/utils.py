@@ -24,7 +24,8 @@ def from_change_to_prices(prices, change):
     return np.add(prices, change)
 
 
-def evaluate(result, y, y_type='next_change', individual_stocks=True):
+def evaluate(result, y, y_type='next_price', individual_stocks=True):
+    assert y_type == 'next_price'
     mape = mean_absolute_percentage_error(y, result)
     mae = mean_absolute_error(y, result)
     mse = mean_squared_error(y, result)
@@ -160,14 +161,13 @@ def from_filename_to_args(filename):
     return decompress(decoded)
 
 
-def load_data(feature_list, y_features, train_portion, remove_portion_at_end, should_scale_y=True,
-              ):
+def load_data(feature_list, y_features, should_scale_y=True):
     data = pd.read_csv('dataset_v2.csv', index_col=0)
     data = data.dropna()
     # data = data[data['stock'] == 'AAPL']
-    data['all_positive'] = data.groupby('date')['positive'].sum()
-    data['all_negative'] = data.groupby('date')['negative'].sum()
-    data['all_neutral'] = data.groupby('date')['neutral'].sum()
+    # data['all_positive'] = data.groupby('date')['positive'].sum()
+    # data['all_negative'] = data.groupby('date')['negative'].sum()
+    # data['all_neutral'] = data.groupby('date')['neutral'].sum()
     feature_list_element_not_in_dataset = set(feature_list) - set(data.columns.values)
     if (len(feature_list_element_not_in_dataset) > 0):
         raise Exception(f'En feature ligger ikke i datasettet {feature_list_element_not_in_dataset}')
@@ -187,16 +187,20 @@ def load_data(feature_list, y_features, train_portion, remove_portion_at_end, sh
     y = data[y_features].values
     # y = data[y_type].values.reshape(-1, 1)
     y = np.append(data['stock'].values.reshape(-1, 1), y, axis=1)
-    y = group_by_stock(y)
+    y = group_by_stock(y)[:15, :, ]
 
-    X = group_by_stock(X)
-    train_size = int(X.shape[1] * train_portion)
-    remove_size = int(X.shape[1] * remove_portion_at_end)
+    X = group_by_stock(X)[:15, :, ]
+    train_size = int(X.shape[1] * .8)
+    val_size = int(X.shape[1] * .1)
+    test_size = int(X.shape[1] * .1)
 
     X_train = X[:, :train_size, 1:]
-    X_test = X[:, train_size:(-remove_size if remove_size > 0 else 99999999), 1:]
+    X_val = X[:, train_size:train_size + val_size, 1:]
+    X_test = X[:, train_size + val_size:, 1:]
+
     y_train = y[:, :train_size, 1:]
-    y_test = y[:, train_size:(-remove_size if remove_size > 0 else 99999999), 1:]
+    y_val = y[:, train_size:train_size + val_size, 1:]
+    y_test = y[:, train_size + val_size:, 1:]
 
     # X_train = np.add.reduce(X_train, 0).reshape((1, X_train.shape[1], X_train.shape[2]))
     # X_test = np.add.reduce(X_test, 0).reshape((1, X_test.shape[1], X_test.shape[2]))
@@ -205,88 +209,107 @@ def load_data(feature_list, y_features, train_portion, remove_portion_at_end, sh
 
     X_scaler = Scaler()
     y_scaler = Scaler()
+
     if should_scale_y:
-        X_train, X_test = X_scaler.fit_on_training_and_transform_on_training_and_test(X_train, X_test)
-        y_train, y_test = y_scaler.fit_on_training_and_transform_on_training_and_test(y_train, y_test)
+        X_scaler.fit(X_train)
+        X_train = X_scaler.transform(X_train)
+        X_val = X_scaler.transform(X_val)
+        X_test = X_scaler.transform(X_test)
+
+        y_scaler.fit(y_train)
+        y_train = y_scaler.transform(y_train)
+        y_val = y_scaler.transform(y_val)
+        y_test = y_scaler.transform(y_test)
 
     if (X_train.shape[2] != len(feature_list)):
         raise Exception('Lengden er feil')
 
-    return X_train.astype(np.float)[:15, :, :], y_train.astype(np.float)[:15, :, :], \
-           X_test.astype(np.float)[:15, :, :], y_test.astype(np.float)[:15, :, :], \
-           X[:15, 0, 0], \
-           y_scaler
+    return (X_train, X_val, X_test), (y_train, y_val, y_test), X[:, 0, 0], y_scaler
 
 
 def flatten_list(l):
     return [item for sublist in l for item in sublist]
 
 
-def transform_from_change_to_price(change_train, change_val):
-    _, price_train, _, price_val, _, _ = load_data(['prev_price_1'], ['price', 'next_price'], .8, .1, False)
+def transform_from_change_to_price(change_train, change_val, change_test):
+    _, (price_train, price_val, price_test), *_ = load_data(['prev_price_1'], ['price', 'next_price'], False)
+
     result_train = np.add(price_train[:, :, 0], change_train.reshape(change_train.shape[:2]))
     result_val = np.add(price_val[:, :, 0], change_val.reshape(change_val.shape[:2]))
+    result_test = np.add(price_test[:, :, 0], change_test.reshape(change_test.shape[:2]))
     y_train = price_train[:, :, 1]
     y_val = price_val[:, :, 1]
-    return (result_train, result_val), (y_train, y_val)
+    y_test = price_test[:, :, 1]
+    return (result_train, result_val, result_test), (y_train, y_val, y_test)
 
 
-def predict_plots(model, X_train, y_train, X_val, y_val, scaler_y, y_type, stocklist, directory, additional_data=[],
+def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist, directory, additional_data=[],
                   is_bidir=False):
-    X = np.concatenate((X_train, X_val), axis=1)
-    y = np.concatenate((y_train, y_val), axis=1)
+    (X_train, X_val, X_test) = X_partitions
+    (y_train, y_val, y_test) = y_partitions
+
+    X = np.concatenate((X_train, X_val, X_test), axis=1)
+    y = np.concatenate((y_train, y_val, y_test), axis=1)
 
     n_stocks = X_train.shape[0]
 
-    if is_bidir:
-        print('Bidirectional model')
-        result = y_train
-        for i in range(X_val.shape[1]):
-            print(i)
-            current_timestep = X_train.shape[1] + i
-            current_X = X[:, : current_timestep + 1, :]
-            prediction = model.predict_on_batch([current_X] + additional_data).numpy()
-            result = np.concatenate((result, prediction[:, -1:, ]), axis=1)
-    else:
-        print('Stacked LSTM model')
-        result = model.predict([X] + additional_data)
+    result = model.predict([X] + additional_data)
 
     # If multiple outputs keras returns list
     if isinstance(result, list):
         result = np.concatenate(result, axis=2)
-    results_inverse_scaled = scaler_y.inverse_transform(result)
-    y_inverse_scaled = scaler_y.inverse_transform(y)
-    training_size = X_train.shape[1]
+    results_inverse = scaler_y.inverse_transform(result)
+    y_inverse = scaler_y.inverse_transform(y)
 
-    result_train = results_inverse_scaled[:, :training_size, :1].reshape(n_stocks, -1)
-    result_val = results_inverse_scaled[:, training_size:, :1].reshape(n_stocks, -1)
+    result_train, result_val, result_test, *_ = np.split(results_inverse,
+                                                         [X_train.shape[1],
+                                                          X_train.shape[1] + X_val.shape[1],
+                                                          X.shape[1]], axis=1)
 
-    y_train = y_inverse_scaled[:, :training_size, :1].reshape(n_stocks, -1)
-    y_val = y_inverse_scaled[:, training_size:, :1].reshape(n_stocks, -1)
-
-    _, price_train, _, price_val, _, _ = load_data(['prev_price_1'], ['price', 'next_price'], .8, .1, False)
-    if (y_type == 'next_change'):
-        (result_train, result_val), (y_train, y_val) = transform_from_change_to_price(result_train, result_val)
-        y_type = 'next_price'
-
-    val_evaluation = evaluate(result_val, y_val, y_type)
-    train_evaluation = evaluate(result_train, y_train, y_type)
-    print('Val: ', val_evaluation)
-    print('Training:', train_evaluation)
-    y_axis_label = 'Change $' if y_type == 'next_change' else 'Price $'
+    y_train, y_val, y_test, *_ = np.split(y_inverse,
+                                          [X_train.shape[1],
+                                           X_train.shape[1] + X_val.shape[1],
+                                           X.shape[1]], axis=1)
 
     from src.baseline_models import naive_model
-    naive_predictions, _ = naive_model(y_train, y_val, scaler_y, y_type)
-    naive_evaluation = evaluate(naive_predictions.reshape((naive_predictions.shape[0], -1)), y_val, y_type)
+    (naive_train, naive_val, naive_test) = naive_model((y_train, y_val, y_test), y_type)
+
+    y_axis_label = 'Change $' if y_type == 'next_change' else 'Price $'
+
     plot(directory, f'Training', stocklist, [result_train, y_train], ['Predicted', 'True value'], ['Day', y_axis_label])
+    plot(directory, 'Validation', stocklist, [result_val, y_val], ['Predicted', 'True value'], ['Day', y_axis_label])
+    plot(directory, 'Test', stocklist, [result_test, y_test], ['Predicted', 'True testue'], ['Day', y_axis_label])
+
     [plot(directory, 'Validation', stocklist,
-          [result_val[:, :(i + 1) * 25], naive_predictions[:, :(i + 1) * 25],
+          [result_val[:, :(i + 1) * 25], naive_val[:, :(i + 1) * 25],
            y_val[:, :(i + 1) * 25]], ['LSTM', 'Naive', 'True value'], ['Day', y_axis_label], start_at=i * 25) for i in
      range(6)]
-    plot(directory, 'Validation', stocklist, [result_val, y_val], ['Predicted', 'True value'], ['Day', y_axis_label])
-    # np.savetxt(f'{directory}/y.txt', y_inverse_scaled.reshape(-1))
-    # np.savetxt(f"{directory}/result.txt", results_inverse_scaled.reshape(-1))
-    return {'training': train_evaluation, 'validation': val_evaluation, 'naive': naive_evaluation}
+    [plot(directory, 'Test', stocklist,
+          [result_test[:, :(i + 1) * 25], naive_test[:, :(i + 1) * 25],
+           y_test[:, :(i + 1) * 25]], ['LSTM', 'Naive', 'True value'], ['Day', y_axis_label], start_at=i * 25) for i in
+     range(6)]
+
+    if (y_type == 'next_change'):
+        (result_train, result_val, result_test), (y_train, y_val, y_test) = transform_from_change_to_price(result_train,
+                                                                                                           result_val,
+                                                                                                           result_test)
+
+    train_evaluation = evaluate(result_train, y_train, 'next_price')
+    val_evaluation = evaluate(result_val, y_val, 'next_price')
+    test_evaluation = evaluate(result_test, y_test, 'next_price')
+
+    naive_val_evaluation = evaluate(naive_val, y_val, 'next_price')
+    naive_test_evaluation = evaluate(naive_val, y_val, 'next_price')
+
+    print('Training:', train_evaluation)
+    print('Val: ', val_evaluation)
+    print('Test: ', test_evaluation)
+
+    write_to_json_file(train_evaluation, f'{directory}/train_evaluation.json')
+    write_to_json_file(val_evaluation, f'{directory}/val_evaluation.json')
+    write_to_json_file(test_evaluation, f'{directory}/test_evaluation.json')
+    write_to_json_file(naive_val_evaluation, f'{directory}/naive_val_evaluation.json')
+    write_to_json_file(naive_test_evaluation, f'{directory}/naive_test_evaluation.json')
 
 
 def write_to_json_file(dictionary, filepath):
