@@ -1,0 +1,47 @@
+{
+    "dropout": 0.0,
+    "epochs": 10000000,
+    "time": "2020-07-23_16.47.23",
+    "features": "price, positive, negative, neutral, positive_prop, negative_prop, neutral_prop",
+    "model-type": "StackedLSTM",
+    "layer-sizes": "[80, 80]",
+    "loss": "mae",
+    "seed": 2,
+    "X-train-shape": [
+        15,
+        1328,
+        7
+    ],
+    "X-val-shape": [
+        15,
+        166,
+        7
+    ],
+    "y-train-shape": [
+        15,
+        1328,
+        1
+    ],
+    "y-val-shape": [
+        15,
+        166,
+        1
+    ],
+    "X-stocks": [
+        "AAPL",
+        "AMD",
+        "AMZN",
+        "BIDU",
+        "DIS",
+        "FB",
+        "HD",
+        "INTC",
+        "KO",
+        "NFLX",
+        "NVDA",
+        "PFE",
+        "QCOM",
+        "TSLA",
+        "WMT"
+    ]
+}
