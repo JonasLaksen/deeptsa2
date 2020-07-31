@@ -91,7 +91,7 @@ configurations = [
 ]
 
 n = 10000
-number_of_epochs = 1000
+number_of_epochs = 1
 
 feature_subsets = [['change', 'open', 'high', 'low', 'price']]
 

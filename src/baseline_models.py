@@ -17,14 +17,14 @@ def naive_model(y_partitions, y_type):
     y_train, y_val, y_test = y_partitions
     y = np.concatenate((y_train, y_val, y_test), axis=1)
     if y_type == 'next_price' or y_type == 'next_open':
-        return (y[:, :1, ],
-                y[:, y_train.shape[1] - 1: y_train.shape[1] + y_val.shape[1] - 1, ],
-                y[:, - y_test.shape[1] - 1:-1, ])
+        return (y[:, :1, 0],
+                y[:, y_train.shape[1] - 1: y_train.shape[1] + y_val.shape[1] - 1, 0],
+                y[:, - y_test.shape[1] - 1:-1, 0])
     else:
-        result = np.zeros((y.shape[0], y.shape[1], 1))
-        return (result[:, :y_train.shape[1], :],
-                result[:, y_train.shape[1]:y_train.shape[1] + y_val.shape[1], :],
-                result[:, -y_test.shape[1]:, :])
+        result = np.zeros((y.shape[0], y.shape[1]))
+        return (result[:, :y_train.shape[1]],
+                result[:, y_train.shape[1]:y_train.shape[1] + y_val.shape[1]],
+                result[:, -y_test.shape[1]:])
 
 
 def svm(X_train, X_test, y_train, y_test):
@@ -115,12 +115,12 @@ def main(y_type, on_test_set=False):
 
     evaluation_val = evaluate(result_val.reshape((result_val.shape[0], -1)), y_val.reshape((y_val.shape[0], -1)),
                               y_type=y_type[0])
-    etestuation_test = evaluate(result_test.reshape((result_test.shape[0], -1)), y_test.reshape((y_test.shape[0], -1)),
+    evaluation_test = evaluate(result_test.reshape((result_test.shape[0], -1)), y_test.reshape((y_test.shape[0], -1)),
                                 y_type=y_type[0])
     # evaluation_test = evaluate(result_test.reshape((result_test.shape[0], -1)), y_test.reshape((y_test.shape[0], -1)),
     #                            y_type=y_type[0])
     print(f'Val: {evaluation_val}')
-    print(f'Test: {etestuation_test}')
+    print(f'Test: {evaluation_test}')
     # print(f'Test: {evaluation_test}')
     return (result_val, result_val), (y_val, y_val)
 
@@ -144,7 +144,7 @@ def naive_next_price_using_next_open():
     evaluation = (evaluate(result.reshape((result.shape[0], -1)), y.reshape((y.shape[0], -1)), y_type='next_price'))
 
 
-main(['next_change'], on_test_set=True)
-main(['next_price'], on_test_set=True)
+# main(['next_change'], on_test_set=True)
+# main(['next_price'], on_test_set=True)
 # compare_with_model([ 'next_price' ])
 # naive_next_price_using_next_open()

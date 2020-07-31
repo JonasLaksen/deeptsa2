@@ -251,8 +251,6 @@ def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist
     X = np.concatenate((X_train, X_val, X_test), axis=1)
     y = np.concatenate((y_train, y_val, y_test), axis=1)
 
-    n_stocks = X_train.shape[0]
-
     result = model.predict([X] + additional_data)
 
     # If multiple outputs keras returns list
@@ -293,17 +291,20 @@ def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist
         (result_train, result_val, result_test), (y_train, y_val, y_test) = transform_from_change_to_price(result_train,
                                                                                                            result_val,
                                                                                                            result_test)
+        (_, naive_val, naive_test), _ = transform_from_change_to_price(naive_train, naive_val, naive_test)
 
     train_evaluation = evaluate(result_train, y_train, 'next_price')
     val_evaluation = evaluate(result_val, y_val, 'next_price')
     test_evaluation = evaluate(result_test, y_test, 'next_price')
 
     naive_val_evaluation = evaluate(naive_val, y_val, 'next_price')
-    naive_test_evaluation = evaluate(naive_val, y_val, 'next_price')
+    naive_test_evaluation = evaluate(naive_test, y_test, 'next_price')
 
-    print('Training:', train_evaluation)
-    print('Val: ', val_evaluation)
-    print('Test: ', test_evaluation)
+    print('Training:', train_evaluation[0])
+    print('Val: ', val_evaluation[0])
+    print('Test: ', test_evaluation[0])
+    print('Naive val: ', naive_val_evaluation[0])
+    print('Naive test: ', naive_test_evaluation[0])
 
     write_to_json_file(train_evaluation, f'{directory}/train_evaluation.json')
     write_to_json_file(val_evaluation, f'{directory}/val_evaluation.json')
