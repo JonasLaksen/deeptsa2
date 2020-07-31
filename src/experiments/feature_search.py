@@ -1,25 +1,15 @@
 import os
 import sys
-from collections import OrderedDict
-from datetime import datetime
-
 import pandas
 import tensorflow as tf
-
+from collections import OrderedDict
+from datetime import datetime
 from src.models.stacked_lstm import StackedLSTM
 from src.utils import load_data, plot_one, predict_plots, write_to_json_file
 
 pandas.set_option('display.max_columns', 500)
 pandas.set_option('display.width', 1000)
 pandas.set_option('display.max_rows', 1000)
-
-
-# epsilon=1e-04
-
-
-def calculate_n_features_and_batch_size(X_train):
-    return X_train.shape[2], X_train.shape[0]
-
 
 if len(sys.argv) > 1:
     folder = sys.argv[1]
@@ -37,7 +27,7 @@ def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_funct
 
     (X_train, X_val, X_test), (y_train, y_val, y_test), X_stocks, scaler_y = load_data(feature_list, y_features)
 
-    n_features, batch_size = calculate_n_features_and_batch_size(X_train)
+    n_features, batch_size = X_train.shape[2], X_train.shape[0]
     meta = {
         'dropout': dropout_rate,
         'epochs': epochs,
@@ -54,12 +44,17 @@ def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_funct
         'X-stocks': list(X_stocks)
     }
 
-    model = model_generator(n_features=n_features, layer_sizes=layer_sizes, return_states=False,
+    model = model_generator(n_features=n_features,
+                            layer_sizes=layer_sizes,
+                            return_states=False,
                             dropout=dropout_rate)
     model.compile(optimizer=tf.keras.optimizers.Adam(), loss=loss_function)
-    history = model.fit(X_train, y_train,
+    history = model.fit(X_train,
+                        y_train,
                         validation_data=(X_val, y_val),
-                        batch_size=batch_size, epochs=epochs, shuffle=False,
+                        batch_size=batch_size,
+                        epochs=epochs,
+                        shuffle=False,
                         callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',
                                                                     patience=1000, restore_best_weights=True)]
                         )
@@ -74,10 +69,13 @@ def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_funct
                   X_stocks,
                   directory)
 
-    plot_one('Loss history', [history.history['loss'], history.history['val_loss']],
+    plot_one('Loss history',
+             [history.history['loss'],
+              history.history['val_loss']],
              ['Training loss', 'Validation loss'],
              ['Epoch', 'Loss'],
-             f'{directory}/loss_history.svg', 10)
+             f'{directory}/loss_history.svg',
+             10)
 
     write_to_json_file(history.history, f'{directory}/loss_history.json', )
     write_to_json_file(meta, f'{directory}/meta.json', )
