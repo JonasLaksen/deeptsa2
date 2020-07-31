@@ -52,14 +52,11 @@ def write_to_dataset_file():
         df['next_price'] = df['price'].shift(-1)
         df['next_change'] = df['next_price'] - df['price']
 
-        df['next_open'] = df['open'].shift(-1)
-        df['next_low'] = df['low'].shift(-1)
-        df['next_high'] = df['high'].shift(-1)
-        df['next_trendscore'] = df['trendscore'].shift(-1)
+        df['open_close_change'] = df['price'] - df['open']
+        df['high_close_change'] = df['price'] - df['high']
+        df['low_close_change'] = df['price'] - df['low']
 
-        df['open_change'] = ( df['next_open'] - df['price'] ).shift(1)
-        df['low_change'] = ( df['next_low'] - df['price'] ).shift(1)
-        df['high_change'] = ( df['next_high'] - df['price'] ).shift(1)
+        df['next_trendscore'] = df['trendscore'].shift(-1)
         df['trendscore_change'] = ( df['next_trendscore'] - df['trendscore'] ).shift(1)
 
         df['change'] = df['next_change'].shift(1)

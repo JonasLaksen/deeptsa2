@@ -7,6 +7,8 @@ sentiment_features = ['positive', 'negative', 'neutral', 'positive_prop', 'negat
                       'neutral_prop']
 trendscore_features = ['trendscore']
 
+price_changes_today = [ 'open_close_change', 'high_close_change', 'low_close_change' ]
+
 all_features_with_price = [
     price,
     price + trading_features_without_price,
@@ -26,6 +28,7 @@ all_features_with_change = [
 
 def multiple_time_steps(features):
     return [f'prev_{feature}_{i}' for i in range(3) for feature in features]
+
 
 def powerset(s):
     x = len(s)

@@ -6,6 +6,7 @@ import numpy as np
 from collections import OrderedDict
 from datetime import datetime
 
+from src.features import price_changes_today, trading_features_without_change
 from src.models.spec_network import SpecializedNetwork
 from src.models.stacked_lstm import StackedLSTM
 from src.models.stacked_lstm_state import StackedLSTMWithState
@@ -98,9 +99,11 @@ configurations = [
 ]
 
 n = 10000
-number_of_epochs = 10
+number_of_epochs = 1000000
 
-feature_subsets = [['price', 'trendscore']]
+feature_subsets = [['change'] + price_changes_today,
+                   ['change', 'trendscore_change'],
+                   ['change'] + trading_features_without_change + price_changes_today]
 
 print(feature_subsets)
 for seed in range(3)[:n]:
