@@ -17,14 +17,14 @@ def naive_model(y_partitions, y_type):
     y_train, y_val, y_test = y_partitions
     y = np.concatenate((y_train, y_val, y_test), axis=1)
     if y_type == 'next_price' or y_type == 'next_open':
-        return (y[:, :1, 0],
-                y[:, y_train.shape[1] - 1: y_train.shape[1] + y_val.shape[1] - 1, 0],
-                y[:, - y_test.shape[1] - 1:-1, 0])
+        return (y[:, :1, :],
+                y[:, y_train.shape[1] - 1: y_train.shape[1] + y_val.shape[1] - 1, :],
+                y[:, - y_test.shape[1] - 1:-1, :])
     else:
-        result = np.zeros((y.shape[0], y.shape[1]))
-        return (result[:, :y_train.shape[1]],
-                result[:, y_train.shape[1]:y_train.shape[1] + y_val.shape[1]],
-                result[:, -y_test.shape[1]:])
+        result = np.zeros((y.shape[0], y.shape[1], 1))
+        return (result[:, :y_train.shape[1], :],
+                result[:, y_train.shape[1]:y_train.shape[1] + y_val.shape[1], :],
+                result[:, -y_test.shape[1]:, :])
 
 
 def svm(X_train, X_test, y_train, y_test):

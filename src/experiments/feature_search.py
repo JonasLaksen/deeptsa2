@@ -91,9 +91,9 @@ configurations = [
 ]
 
 n = 10000
-number_of_epochs = 1
+number_of_epochs = 1000000
 
-feature_subsets = [['change', 'open', 'high', 'low', 'price']]
+feature_subsets = [['price', 'trendscore']]
 
 print(feature_subsets)
 for seed in range(3)[:n]:
@@ -103,6 +103,6 @@ for seed in range(3)[:n]:
                                              dropout_rate=.0,
                                              loss_function='mae',
                                              epochs=number_of_epochs,
-                                             y_features=['next_change'],
+                                             y_features=['next_price'],
                                              feature_list=list(OrderedDict.fromkeys(features)),
                                              model_generator=configuration['lstm_type'])

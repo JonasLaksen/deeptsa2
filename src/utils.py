@@ -26,6 +26,8 @@ def from_change_to_prices(prices, change):
 
 def evaluate(result, y, y_type='next_price', individual_stocks=True):
     assert y_type == 'next_price'
+    result = result[:,:,0]
+    y = y[:,:,0]
     mape = mean_absolute_percentage_error(y, result)
     mae = mean_absolute_error(y, result)
     mse = mean_squared_error(y, result)
@@ -243,8 +245,7 @@ def transform_from_change_to_price(change_train, change_val, change_test):
     return (result_train, result_val, result_test), (y_train, y_val, y_test)
 
 
-def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist, directory, additional_data=[],
-                  is_bidir=False):
+def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist, directory, additional_data=[]):
     (X_train, X_val, X_test) = X_partitions
     (y_train, y_val, y_test) = y_partitions
 
@@ -274,18 +275,18 @@ def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist
 
     y_axis_label = 'Change $' if y_type == 'next_change' else 'Price $'
 
-    plot(directory, f'Training', stocklist, [result_train, y_train], ['Predicted', 'True value'], ['Day', y_axis_label])
-    plot(directory, 'Validation', stocklist, [result_val, y_val], ['Predicted', 'True value'], ['Day', y_axis_label])
-    plot(directory, 'Test', stocklist, [result_test, y_test], ['Predicted', 'True testue'], ['Day', y_axis_label])
+    # plot(directory, f'Training', stocklist, [result_train, y_train], ['Predicted', 'True value'], ['Day', y_axis_label])
+    # plot(directory, 'Validation', stocklist, [result_val, y_val], ['Predicted', 'True value'], ['Day', y_axis_label])
+    # plot(directory, 'Test', stocklist, [result_test, y_test], ['Predicted', 'True testue'], ['Day', y_axis_label])
 
-    [plot(directory, 'Validation', stocklist,
-          [result_val[:, :(i + 1) * 25], naive_val[:, :(i + 1) * 25],
-           y_val[:, :(i + 1) * 25]], ['LSTM', 'Naive', 'True value'], ['Day', y_axis_label], start_at=i * 25) for i in
-     range(6)]
-    [plot(directory, 'Test', stocklist,
-          [result_test[:, :(i + 1) * 25], naive_test[:, :(i + 1) * 25],
-           y_test[:, :(i + 1) * 25]], ['LSTM', 'Naive', 'True value'], ['Day', y_axis_label], start_at=i * 25) for i in
-     range(6)]
+    # [plot(directory, 'Validation', stocklist,
+    #       [result_val[:, :(i + 1) * 25], naive_val[:, :(i + 1) * 25],
+    #        y_val[:, :(i + 1) * 25]], ['LSTM', 'Naive', 'True value'], ['Day', y_axis_label], start_at=i * 25) for i in
+    #  range(6)]
+    # [plot(directory, 'Test', stocklist,
+    #       [result_test[:, :(i + 1) * 25], naive_test[:, :(i + 1) * 25],
+    #        y_test[:, :(i + 1) * 25]], ['LSTM', 'Naive', 'True value'], ['Day', y_axis_label], start_at=i * 25) for i in
+    #  range(6)]
 
     if (y_type == 'next_change'):
         (result_train, result_val, result_test), (y_train, y_val, y_test) = transform_from_change_to_price(result_train,
