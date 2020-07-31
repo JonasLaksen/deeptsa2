@@ -13,7 +13,7 @@ def print_for_master_thesis_compact(path, group_fields, sort_by=['sum_ranks'], f
         with open(meta_path, 'r') as json_file:
             meta = json.load(json_file)
 
-        evaluation_path = f'{subdirectory}evaluation.json'
+        evaluation_path = f'{subdirectory}val_evaluation.json'
         with open(evaluation_path, 'r') as json_file:
             evaluation = json.load(json_file)
 
@@ -23,10 +23,10 @@ def print_for_master_thesis_compact(path, group_fields, sort_by=['sum_ranks'], f
                                'loss': meta['loss'],
                                'features': meta['features'],
                                'model-type': meta['model-type'],
-                               'mape': evaluation['validation'][0]['MAPE'],
-                               'mae': evaluation['validation'][0]['MAE'],
-                               'mse': evaluation['validation'][0]['MSE'],
-                               'da': evaluation['validation'][0]['DA'] * 100,
+                               'mape': evaluation[0]['MAPE'],
+                               'mae': evaluation[0]['MAE'],
+                               'mse': evaluation[0]['MSE'],
+                               'da': evaluation[0]['DA'] * 100,
                                })
 
     df = pandas.DataFrame(subexperiments)
@@ -76,7 +76,7 @@ def print_for_master_thesis(path, group_fields, sort_by=['sum_ranks'], group_siz
         with open(meta_path, 'r') as json_file:
             meta = json.load(json_file)
 
-        evaluation_path = f'{subdirectory}evaluation.json'
+        evaluation_path = f'{subdirectory}val_evaluation.json'
         with open(evaluation_path, 'r') as json_file:
             evaluation = json.load(json_file)
 
@@ -86,10 +86,10 @@ def print_for_master_thesis(path, group_fields, sort_by=['sum_ranks'], group_siz
                                'loss': meta['loss'],
                                'features': meta['features'],
                                'model-type': meta['model-type'],
-                               'mape': evaluation['validation'][0]['MAPE'],
-                               'mae': evaluation['validation'][0]['MAE'],
-                               'mse': evaluation['validation'][0]['MSE'],
-                               'da': evaluation['validation'][0]['DA'] * 100,
+                               'mape': evaluation[0]['MAPE'],
+                               'mae': evaluation[0]['MAE'],
+                               'mse': evaluation[0]['MSE'],
+                               'da': evaluation[0]['DA'] * 100,
                                })
 
     df = pandas.DataFrame(subexperiments)
