@@ -236,12 +236,12 @@ def flatten_list(l):
 def transform_from_change_to_price(change_train, change_val, change_test):
     _, (price_train, price_val, price_test), *_ = load_data(['prev_price_1'], ['price', 'next_price'], False)
 
-    result_train = np.add(price_train[:, :, 0], change_train.reshape(change_train.shape[:2]))
-    result_val = np.add(price_val[:, :, 0], change_val.reshape(change_val.shape[:2]))
-    result_test = np.add(price_test[:, :, 0], change_test.reshape(change_test.shape[:2]))
-    y_train = price_train[:, :, 1]
-    y_val = price_val[:, :, 1]
-    y_test = price_test[:, :, 1]
+    result_train = np.add(price_train[:, :, 0], change_train.reshape(change_train.shape[:2]))[:,:,np.newaxis]
+    result_val = np.add(price_val[:, :, 0], change_val.reshape(change_val.shape[:2]))[:,:,np.newaxis]
+    result_test = np.add(price_test[:, :, 0], change_test.reshape(change_test.shape[:2]))[:,:,np.newaxis]
+    y_train = price_train[:, :, 1][:,:,np.newaxis]
+    y_val = price_val[:, :, 1][:,:,np.newaxis]
+    y_test = price_test[:, :, 1][:,:,np.newaxis]
     return (result_train, result_val, result_test), (y_train, y_val, y_test)
 
 
