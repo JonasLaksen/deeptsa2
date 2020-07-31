@@ -98,8 +98,8 @@ configurations = [
     },
 ]
 
-n = 10000
-number_of_epochs = 1000000
+n = 3
+number_of_epochs = 1
 
 feature_subsets = [['change'] + price_changes_today,
                    ['change', 'trendscore_change'],
