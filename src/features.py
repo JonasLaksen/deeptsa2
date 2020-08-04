@@ -25,6 +25,13 @@ all_features_with_change = [
     change + trading_features_without_change + sentiment_features + trendscore_features
 ]
 
+the_final_features = [
+    price,
+    change,
+    price + trendscore_features + change,
+    trading_features_with_price,
+    change + ['positive'] + price]
+
 
 def multiple_time_steps(features):
     return [f'prev_{feature}_{i}' for i in range(3) for feature in features]

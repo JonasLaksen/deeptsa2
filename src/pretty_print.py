@@ -4,7 +4,7 @@ from glob import glob
 import pandas
 
 
-def print_for_master_thesis_compact(path, group_fields, sort_by=['sum_ranks'], fields_to_show=['features'], show_model=True, group_size=3):
+def print_for_master_thesis_compact(path, group_fields, sort_by=['sum_ranks'], fields_to_show=['features'], show_model=True, group_size=3, val_or_test='val'):
     subdirectories = glob(path)
 
     subexperiments = []
@@ -13,7 +13,7 @@ def print_for_master_thesis_compact(path, group_fields, sort_by=['sum_ranks'], f
         with open(meta_path, 'r') as json_file:
             meta = json.load(json_file)
 
-        evaluation_path = f'{subdirectory}val_evaluation.json'
+        evaluation_path = f'{subdirectory}{val_or_test}_evaluation.json'
         with open(evaluation_path, 'r') as json_file:
             evaluation = json.load(json_file)
 
@@ -67,7 +67,7 @@ def print_for_master_thesis_compact(path, group_fields, sort_by=['sum_ranks'], f
 
 
 
-def print_for_master_thesis(path, group_fields, sort_by=['sum_ranks'], group_size=3):
+def print_for_master_thesis(path, group_fields, sort_by=['sum_ranks'], group_size=3, val_or_test='val'):
     subdirectories = glob(path)
 
     subexperiments = []
@@ -76,7 +76,7 @@ def print_for_master_thesis(path, group_fields, sort_by=['sum_ranks'], group_siz
         with open(meta_path, 'r') as json_file:
             meta = json.load(json_file)
 
-        evaluation_path = f'{subdirectory}val_evaluation.json'
+        evaluation_path = f'{subdirectory}{val_or_test}_evaluation.json'
         with open(evaluation_path, 'r') as json_file:
             evaluation = json.load(json_file)
 

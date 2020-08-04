@@ -6,7 +6,7 @@ import numpy as np
 from collections import OrderedDict
 from datetime import datetime
 
-from src.features import price_changes_today, trading_features_without_change
+from src.features import price_changes_today, trading_features_without_change, the_final_features
 from src.models.spec_network import SpecializedNetwork
 from src.models.stacked_lstm import StackedLSTM
 from src.models.stacked_lstm_state import StackedLSTMWithState
@@ -64,7 +64,7 @@ def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_funct
                              epochs=epochs,
                              shuffle=False,
                              callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                                         patience=1000, restore_best_weights=True)]
+                                                                         patience=5000, restore_best_weights=True)]
                              )
 
     if not os.path.exists(directory):
@@ -101,12 +101,10 @@ configurations = [
 n = 100000
 number_of_epochs = 1000000000
 
-feature_subsets = [['change'] + price_changes_today,
-                   ['change', 'trendscore_change'],
-                   ['change'] + trading_features_without_change + price_changes_today]
+feature_subsets = the_final_features
 
 print(feature_subsets)
-for seed in range(3)[:n]:
+for seed in range(10)[:n]:
     for features in feature_subsets[:n]:
         for configuration in configurations:
             experiment_hyperparameter_search(seed=seed,
