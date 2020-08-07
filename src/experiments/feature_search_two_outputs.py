@@ -12,21 +12,9 @@ from src.models.stacked_lstm_modified import StackedLSTM_Modified
 from src.pretty_print import print_for_master_thesis
 from src.utils import load_data, plot_one, predict_plots, write_to_json_file
 
-seed = 0
-os.environ['PYTHONHASHSEED'] = str(seed)
 pandas.set_option('display.max_columns', 500)
 pandas.set_option('display.width', 1000)
 pandas.set_option('display.max_rows', 1000)
-
-
-def set_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    tf.random.set_seed(seed)
-
-
-set_seed(seed)
-
 
 def calculate_n_features_and_batch_size(X_train):
     return X_train.shape[2], X_train.shape[0]
@@ -38,16 +26,12 @@ experiment_results_directory = f'results/{os.path.basename(__file__)}/{experimen
 
 def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_function, epochs, y_features, feature_list,
                                      model_generator):
-    set_seed(seed)
     print(feature_list)
     sub_experiment_timestamp = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
     directory = f'{experiment_results_directory}/{model_generator.__name__}-{"-".join([str(x) for x in layer_sizes])}-{sub_experiment_timestamp}'
 
-    train_portion, validation_portion, test_portion = .8, .1, .1
-    X_train, y_train, X_val, y_val, X_stocks, scaler_y = load_data(feature_list, y_features,
-                                                                   train_portion,
-                                                                   test_portion,
-                                                                   True)
+    (X_train, X_val, X_test), (y_train, y_val, y_test), X_stocks, scaler_y = load_data(feature_list, y_features)
+
 
     n_features, batch_size = calculate_n_features_and_batch_size(X_train)
     meta = {
@@ -78,19 +62,24 @@ def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_funct
                         validation_data=([X_val, y_val_list]),
                         batch_size=batch_size, epochs=epochs, shuffle=False,
                         callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                                    patience=100, restore_best_weights=True)]
+                                                                    patience=1000, restore_best_weights=True)]
                         )
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    evaluation = predict_plots(model, X_train, y_train, X_val, y_val, scaler_y, y_features[0], X_stocks,
-                               directory, is_bidir=model_generator == BidirLSTM)
+    predict_plots(model,
+                  (X_train, X_val, X_test),
+                  (y_train, y_val, y_test),
+                  scaler_y,
+                  y_features[0],
+                  X_stocks,
+                  directory)
+
     plot_one('Loss history', [history.history['loss'], history.history['val_loss']], ['Training loss', 'Test loss'],
              ['Epoch', 'Loss'],
              f'{directory}/loss_history.png')
 
     write_to_json_file(str( history.history ), f'{directory}/loss_history.json', )
-    write_to_json_file(evaluation, f'{directory}/evaluation.json')
     write_to_json_file(meta, f'{directory}/meta.json', )
 
 
@@ -124,7 +113,7 @@ feature_subsets = [price,
                    ]
 
 n = 100
-number_of_epochs = 5000
+number_of_epochs = 100000000
 
 for seed in range(3)[:n]:
     for features in feature_subsets[:n]:
@@ -136,8 +125,4 @@ for seed in range(3)[:n]:
                                          feature_list=features,
                                          model_generator=StackedLSTM_Modified)
 
-print_folder = f'server_results/feature_search.py/2020-07-06_22.45.21/*/'
-# print_for_master_thesis(print_folder, ['features', 'layer'], compact=True, fields_to_show=['features'])
-# print_for_master_thesis(print_folder, ['features', 'model-type', 'layer'])
 
-# print_for_master_thesis_compact(print_folder, ['features', 'layer', 'model-type'])

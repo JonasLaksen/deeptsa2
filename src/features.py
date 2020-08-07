@@ -33,8 +33,8 @@ the_final_features = [
     change + ['positive'] + price]
 
 
-def multiple_time_steps(features):
-    return [f'prev_{feature}_{i}' for i in range(3) for feature in features]
+def multiple_time_steps(features, steps=2):
+    return [f'prev_{feature}_{i}' for i in range(2) for feature in features]
 
 
 def powerset(s):

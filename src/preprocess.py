@@ -50,6 +50,7 @@ def write_to_dataset_file():
     dfs = list(map(lambda x: data_from_stock(x), stock_list))
     for df in dfs:
         df['next_price'] = df['price'].shift(-1)
+        df['next_open'] = df['open'].shift(-1)
         df['next_change'] = df['next_price'] - df['price']
 
         df['open_close_change'] = df['price'] - df['open']

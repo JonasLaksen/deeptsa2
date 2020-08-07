@@ -188,10 +188,11 @@ def load_data(feature_list, y_features, should_scale_y=True):
 
     y = data[y_features].values
     # y = data[y_type].values.reshape(-1, 1)
+    number_of_stocks = 15
     y = np.append(data['stock'].values.reshape(-1, 1), y, axis=1)
-    y = group_by_stock(y)[:15, :, ]
+    y = group_by_stock(y)[:number_of_stocks, :, ]
 
-    X = group_by_stock(X)[:15, :, ]
+    X = group_by_stock(X)[:number_of_stocks, :, ]
     train_size = int(X.shape[1] * .8)
     val_size = int(X.shape[1] * .1)
     test_size = int(X.shape[1] * .1)
@@ -260,12 +261,12 @@ def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist
     results_inverse = scaler_y.inverse_transform(result)
     y_inverse = scaler_y.inverse_transform(y)
 
-    result_train, result_val, result_test, *_ = np.split(results_inverse,
+    result_train, result_val, result_test, *_ = np.split(results_inverse[:,:,:1],
                                                          [X_train.shape[1],
                                                           X_train.shape[1] + X_val.shape[1],
                                                           X.shape[1]], axis=1)
 
-    y_train, y_val, y_test, *_ = np.split(y_inverse,
+    y_train, y_val, y_test, *_ = np.split(y_inverse[:,:,:1],
                                           [X_train.shape[1],
                                            X_train.shape[1] + X_val.shape[1],
                                            X.shape[1]], axis=1)
