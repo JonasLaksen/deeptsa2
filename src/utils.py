@@ -272,7 +272,8 @@ def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist
                                            X.shape[1]], axis=1)
 
     from src.baseline_models import naive_model
-    (naive_train, naive_val, naive_test) = naive_model((y_train, y_val, y_test), y_type)
+    _, (open_train, open_val, open_test), *_ = load_data([], ['next_price'], False)
+    (naive_train, naive_val, naive_test) = naive_model((open_train, open_val, open_test), y_type)
 
     y_axis_label = 'Change $' if y_type == 'next_change' else 'Price $'
 
