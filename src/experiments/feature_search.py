@@ -92,7 +92,7 @@ configurations = [
 n = 10000
 number_of_epochs = 10000000
 
-feature_subsets = [['price'], trading_features_with_price, ['price'] + sentiment_features, ['price'] + trendscore_features, trading_features_with_price + sentiment_features + trendscore_features]
+feature_subsets = [['price', 'next_open'], trading_features_with_price + ['next_open'], ['price'] + sentiment_features + ['next_open'], ['price'] + trendscore_features + ['next_open'], trading_features_with_price + sentiment_features + trendscore_features + ['next_open']]
 
 print(feature_subsets)
 for seed in range(3)[:n]:
@@ -102,6 +102,6 @@ for seed in range(3)[:n]:
                                              dropout_rate=.0,
                                              loss_function='mae',
                                              epochs=number_of_epochs,
-                                             y_features=['next_open'],
+                                             y_features=['next_price'],
                                              feature_list=list(OrderedDict.fromkeys(features)),
                                              model_generator=configuration['lstm_type'])
