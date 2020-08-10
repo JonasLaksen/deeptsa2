@@ -1,0 +1,36 @@
+{
+    "dropout": 0.0,
+    "epochs": 10000000,
+    "time": "2020-08-10_21.03.39",
+    "features": "change, trendscore",
+    "model-type": "StackedLSTM",
+    "layer-sizes": "[160]",
+    "loss": "mae",
+    "seed": 2,
+    "X-train-shape": [
+        1,
+        1328,
+        2
+    ],
+    "X-val-shape": [
+        1,
+        166,
+        2
+    ],
+    "y-train-shape": [
+        1,
+        1328,
+        1
+    ],
+    "y-val-shape": [
+        1,
+        166,
+        1
+    ],
+    "X-stocks": [
+        "FB"
+    ],
+    "output": [
+        "next_change"
+    ]
+}

@@ -96,12 +96,12 @@ configurations = [
 n = 10000
 number_of_epochs = 10000000
 
-feature_subsets = [trendscore_features, ['change'], trading_features_with_price, ['change'] + sentiment_features,
-                   ['change'] + trendscore_features,
-                   trading_features_with_price + sentiment_features + trendscore_features,
-                   trading_features_with_price + sentiment_features + trendscore_features + multiple_time_steps(
-                       trading_features_with_price + sentiment_features + trendscore_features)]
-# feature_subsets = [trendscore_features]
+#feature_subsets = [trendscore_features, ['change'], trading_features_with_price, ['change'] + sentiment_features,
+                   #['change'] + trendscore_features,
+                   #trading_features_with_price + sentiment_features + trendscore_features,
+                   #trading_features_with_price + sentiment_features + trendscore_features + multiple_time_steps(
+                       #trading_features_with_price + sentiment_features + trendscore_features)]
+feature_subsets = [trendscore_features]
 
 print(feature_subsets)
 for seed in range(3)[:n]:
