@@ -188,11 +188,12 @@ def load_data(feature_list, y_features, should_scale_y=True):
 
     y = data[y_features].values
     # y = data[y_type].values.reshape(-1, 1)
-    number_of_stocks = 15
+    from_index = 0
+    to_index = 1
     y = np.append(data['stock'].values.reshape(-1, 1), y, axis=1)
-    y = group_by_stock(y)[:number_of_stocks, :, ]
+    y = group_by_stock(y)[from_index:to_index, :, ]
 
-    X = group_by_stock(X)[:number_of_stocks, :, ]
+    X = group_by_stock(X)[from_index:to_index, :, ]
     train_size = int(X.shape[1] * .8)
     val_size = int(X.shape[1] * .1)
     test_size = int(X.shape[1] * .1)
@@ -272,8 +273,8 @@ def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist
                                            X.shape[1]], axis=1)
 
     from src.baseline_models import naive_model
-    _, (naive_train, naive_val, naive_test), *_ = load_data([], ['next_open'], False)
-    #(naive_train, naive_val, naive_test) = naive_model((open_train, open_val, open_test), y_type)
+    #_, (naive_train, naive_val, naive_test), *_ = load_data([], ['next_open'], False)
+    (naive_train, naive_val, naive_test) = naive_model((y_train, y_val, y_test), y_type)
 
     y_axis_label = 'Change $' if y_type == 'next_change' else 'Price $'
 
