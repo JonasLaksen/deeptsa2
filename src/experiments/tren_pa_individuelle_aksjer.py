@@ -1,12 +1,14 @@
 import os
 import sys
-import pandas
-import tensorflow as tf
 from collections import OrderedDict
 from datetime import datetime
+
+import pandas
+import tensorflow as tf
+
+from src.features import multiple_time_steps, sentiment_features, trendscore_features, trading_features_with_price
 from src.models.stacked_lstm import StackedLSTM
 from src.utils import load_data, plot_one, predict_plots, write_to_json_file
-from src.features import the_final_features, trading_features_without_change, multiple_time_steps, sentiment_features, change, trendscore_features,trading_features_with_price
 
 pandas.set_option('display.max_columns', 500)
 pandas.set_option('display.width', 1000)
@@ -43,7 +45,8 @@ def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_funct
         'X-val-shape': list(X_val.shape),
         'y-train-shape': list(y_train.shape),
         'y-val-shape': list(y_val.shape),
-        'X-stocks': list(X_stocks)
+        'X-stocks': list(X_stocks),
+        "output": y_features
     }
 
     model = model_generator(n_features=n_features,
@@ -93,8 +96,12 @@ configurations = [
 n = 10000
 number_of_epochs = 10000000
 
-#feature_subsets = [trendscore_features, ['change'], trading_features_with_price, ['change'] + sentiment_features, ['change'] + trendscore_features, trading_features_with_price + sentiment_features + trendscore_features, trading_features_with_price + sentiment_features + trendscore_features + multiple_time_steps(trading_features_with_price + sentiment_features + trendscore_features)]
-feature_subsets = [trendscore_features]
+feature_subsets = [trendscore_features, ['change'], trading_features_with_price, ['change'] + sentiment_features,
+                   ['change'] + trendscore_features,
+                   trading_features_with_price + sentiment_features + trendscore_features,
+                   trading_features_with_price + sentiment_features + trendscore_features + multiple_time_steps(
+                       trading_features_with_price + sentiment_features + trendscore_features)]
+# feature_subsets = [trendscore_features]
 
 print(feature_subsets)
 for seed in range(3)[:n]:
@@ -104,6 +111,6 @@ for seed in range(3)[:n]:
                                              dropout_rate=.0,
                                              loss_function='mae',
                                              epochs=number_of_epochs,
-                                             y_features=['next_price'],
+                                             y_features=['next_change'],
                                              feature_list=list(OrderedDict.fromkeys(features)),
                                              model_generator=configuration['lstm_type'])
