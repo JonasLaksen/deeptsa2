@@ -6,7 +6,7 @@ import numpy as np
 from collections import OrderedDict
 from datetime import datetime
 
-from src.features import price_changes_today, trading_features_without_change, the_final_features
+from src.features import price_changes_today, trading_features_without_change, the_final_features, price, trading_features_with_price, trendscore_features, change
 from src.models.spec_network import SpecializedNetwork
 from src.models.stacked_lstm import StackedLSTM
 from src.models.stacked_lstm_state import StackedLSTMWithState
@@ -101,10 +101,10 @@ configurations = [
 n = 100000
 number_of_epochs = 1000000000
 
-feature_subsets = the_final_features
+feature_subsets = [change, change + trendscore_features, trading_features_with_price, change + ['positive']]
 
 print(feature_subsets)
-for seed in range(10)[:n]:
+for seed in range(3)[:n]:
     for features in feature_subsets[:n]:
         for configuration in configurations:
             experiment_hyperparameter_search(seed=seed,

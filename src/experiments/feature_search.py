@@ -6,7 +6,7 @@ from collections import OrderedDict
 from datetime import datetime
 from src.models.stacked_lstm import StackedLSTM
 from src.utils import load_data, plot_one, predict_plots, write_to_json_file
-from src.features import the_final_features, trading_features_without_change, multiple_time_steps, sentiment_features, change, trendscore_features,trading_features_with_price
+from src.features import the_final_features, trading_features_without_change, multiple_time_steps, sentiment_features, change, trendscore_features,trading_features_with_price, price
 
 pandas.set_option('display.max_columns', 500)
 pandas.set_option('display.width', 1000)
@@ -57,7 +57,7 @@ def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_funct
                         epochs=epochs,
                         shuffle=False,
                         callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                                    patience=1000, restore_best_weights=True)]
+                                                                    patience=5000, restore_best_weights=True)]
                         )
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -92,7 +92,7 @@ configurations = [
 n = 10000
 number_of_epochs = 10000000
 
-feature_subsets = [['price', 'next_open'], trading_features_with_price + ['next_open'], ['price'] + sentiment_features + ['next_open'], ['price'] + trendscore_features + ['next_open'], trading_features_with_price + sentiment_features + trendscore_features + ['next_open']]
+feature_subsets = [change, change + trendscore_features, trading_features_with_price, change + ['positive']]
 
 print(feature_subsets)
 for seed in range(3)[:n]:
@@ -102,6 +102,6 @@ for seed in range(3)[:n]:
                                              dropout_rate=.0,
                                              loss_function='mae',
                                              epochs=number_of_epochs,
-                                             y_features=['next_price'],
+                                             y_features=['next_change'],
                                              feature_list=list(OrderedDict.fromkeys(features)),
                                              model_generator=configuration['lstm_type'])

@@ -189,7 +189,7 @@ def load_data(feature_list, y_features, should_scale_y=True):
     y = data[y_features].values
     # y = data[y_type].values.reshape(-1, 1)
     from_index = 0
-    to_index = 1
+    to_index = 15
     y = np.append(data['stock'].values.reshape(-1, 1), y, axis=1)
     y = group_by_stock(y)[from_index:to_index, :, ]
 
