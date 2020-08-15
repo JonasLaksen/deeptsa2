@@ -7,7 +7,7 @@ from zlib import compress, decompress
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot
-from sklearn.metrics import mean_absolute_error, mean_squared_error, accuracy_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 from src.scaler import Scaler
 
@@ -24,24 +24,41 @@ def from_change_to_prices(prices, change):
     return np.add(prices, change)
 
 
-def evaluate(result, y, y_type='next_price', individual_stocks=True):
-    assert y_type == 'next_price'
-    result = result[:,:,0]
-    y = y[:,:,0]
+def direction_accuracy(y, prediction, reference):
+    one_if_positive_else_negative_one = np.vectorize(lambda element: 1 if element >= 0 else -1)
+
+    y_change = one_if_positive_else_negative_one(y - reference)
+    prediction_change = one_if_positive_else_negative_one(prediction - reference)
+
+    same_directions = y_change * prediction_change >= 0
+    individual_direction_accuracies = (np.sum(same_directions, axis=1)) / (same_directions.shape[1])
+    da = np.mean(individual_direction_accuracies)
+
+    return da
+
+
+def evaluate(result, y, reference, individual_stocks=True):
+    result = result.reshape(result.shape[:2])
+    y = y.reshape(y.shape[:2])
+    reference = reference.reshape(reference.shape[:2])
+
     mape = mean_absolute_percentage_error(y, result)
     mae = mean_absolute_error(y, result)
     mse = mean_squared_error(y, result)
-    accuracy_direction = mean_direction_eval(result, y, y_type)
+
+    accuracy_direction = direction_accuracy(y[:, 1:], result[:, 1:], reference[:, 1:])
+
     total_evaluation = {'stock': 'All', 'MAPE': mape, 'MAE': mae, 'MSE': mse, 'DA': accuracy_direction}
     if individual_stocks:
         evaluations = []
         for i in range(result.shape[0]):
             y_ind = y[i:i + 1, :]
             result_ind = result[i:i + 1, :]
+            reference_ind = reference[i:i + 1, :]
             mape = mean_absolute_percentage_error(y_ind, result_ind)
             mae = mean_absolute_error(y_ind, result_ind)
             mse = mean_squared_error(y_ind, result_ind)
-            accuracy_direction = mean_direction_eval(result_ind, y_ind, y_type)
+            accuracy_direction = direction_accuracy(y_ind[:, 1:], result_ind[:, 1:], reference_ind[:, 1:])
             evaluation = {'stock': i, 'MAPE': mape, 'MAE': mae, 'MSE': mse, 'DA': accuracy_direction}
             evaluations.append(evaluation)
         return [total_evaluation] + evaluations
@@ -69,54 +86,6 @@ def plot_one(title, xs, legends, axises, filename='', start_at=0):
         pyplot.savefig(filename, bbox_inches='tight')
     pyplot.show()
     pyplot.close()
-
-
-def direction_value(x, y):
-    if x > y:
-        return [0]
-    else:
-        return [1]
-
-
-def mean_direction_eval(result, y, y_type):
-    return np.mean(np.array(list(map(lambda x: direction_eval(x[0], x[1], y_type), zip(result, y)))))
-
-
-def direction_eval(result, y, y_type):
-    if y_type == 'next_change':
-        n_same_dir = sum(
-            list(map(lambda x, y: 1 if (x >= 0 and y >= 0) or (x < 0 and y < 0) else 0, result[1:], y[1:])))
-        return n_same_dir / (len(result) - 1)
-
-    result_pair = list(map(lambda x, y: direction_value(x, y), y[:-1], result[1:]))
-    y_pair = list(map(lambda x, y: direction_value(x, y), y[:-1], y[1:]))
-    return accuracy_score(y_pair, result_pair)
-
-
-def make_train_val_test_set(data, training_prop=.8, validation_prop=.1, test_prop=.1):
-    data_size = min(map(lambda data_group: len(data_group), data))
-    train_size, val_size, test_size = int(data_size * training_prop), int(data_size * validation_prop), int(
-        data_size * test_prop)
-    data_train = data[:, -data_size:-data_size + train_size]
-    data_val = data[:, -data_size:-data_size + train_size + val_size]
-    data_test = data[:, -test_size:]
-
-    return data_train, data_val, data_test
-
-
-def create_direction_arrays(X_train, X_val, X_test, y_train, y_val, y_test):
-    X = np.append(X_train, X_val, axis=1)
-    y = np.append(y_train, y_val, axis=1)
-    y_dir = []
-    for i in range(X_train.shape[0]):
-        y_dir_partial = list(map(lambda x, y: direction_value(x, y), y[i][:-1], y[i][1:]))
-        y_dir.append(y_dir_partial)
-
-    X = X[:, :-1]
-    y = y[:, :-1]
-    y_dir = np.array(y_dir)
-
-    return make_train_val_test_set(X), make_train_val_test_set(y), make_train_val_test_set(y_dir)
 
 
 def group_by_stock(data):
@@ -238,43 +207,43 @@ def flatten_list(l):
 def transform_from_change_to_price(change_train, change_val, change_test):
     _, (price_train, price_val, price_test), *_ = load_data(['prev_price_1'], ['price', 'next_price'], False)
 
-    result_train = np.add(price_train[:, :, 0], change_train.reshape(change_train.shape[:2]))[:,:,np.newaxis]
-    result_val = np.add(price_val[:, :, 0], change_val.reshape(change_val.shape[:2]))[:,:,np.newaxis]
-    result_test = np.add(price_test[:, :, 0], change_test.reshape(change_test.shape[:2]))[:,:,np.newaxis]
-    y_train = price_train[:, :, 1][:,:,np.newaxis]
-    y_val = price_val[:, :, 1][:,:,np.newaxis]
-    y_test = price_test[:, :, 1][:,:,np.newaxis]
+    result_train = np.add(price_train[:, :, 0], change_train.reshape(change_train.shape[:2]))[:, :, np.newaxis]
+    result_val = np.add(price_val[:, :, 0], change_val.reshape(change_val.shape[:2]))[:, :, np.newaxis]
+    result_test = np.add(price_test[:, :, 0], change_test.reshape(change_test.shape[:2]))[:, :, np.newaxis]
+    y_train = price_train[:, :, 1][:, :, np.newaxis]
+    y_val = price_val[:, :, 1][:, :, np.newaxis]
+    y_test = price_test[:, :, 1][:, :, np.newaxis]
     return (result_train, result_val, result_test), (y_train, y_val, y_test)
 
 
-def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist, directory, additional_data=[]):
+def predict(model, X_partitions, y_partitions, scaler_y):
     (X_train, X_val, X_test) = X_partitions
     (y_train, y_val, y_test) = y_partitions
 
     X = np.concatenate((X_train, X_val, X_test), axis=1)
+
     y = np.concatenate((y_train, y_val, y_test), axis=1)
-
-    result = model.predict([X] + additional_data)
-
-    # If multiple outputs keras returns list
-    if isinstance(result, list):
-        result = np.concatenate(result, axis=2)
-    results_inverse = scaler_y.inverse_transform(result)
     y_inverse = scaler_y.inverse_transform(y)
 
-    result_train, result_val, result_test, *_ = np.split(results_inverse[:,:,:1],
+    result = model.predict([X])
+    result_inverse = scaler_y.inverse_transform(result)
+
+    result_train, result_val, result_test, *_ = np.split(result_inverse[:, :, :1],
                                                          [X_train.shape[1],
                                                           X_train.shape[1] + X_val.shape[1],
                                                           X.shape[1]], axis=1)
-
-    y_train, y_val, y_test, *_ = np.split(y_inverse[:,:,:1],
+    y_train, y_val, y_test, *_ = np.split(y_inverse[:, :, :1],
                                           [X_train.shape[1],
                                            X_train.shape[1] + X_val.shape[1],
                                            X.shape[1]], axis=1)
 
-    from src.baseline_models import naive_model
-    #_, (naive_train, naive_val, naive_test), *_ = load_data([], ['next_open'], False)
-    (naive_train, naive_val, naive_test) = naive_model((y_train, y_val, y_test), y_type)
+    return (result_train, result_val, result_test), (y_train, y_val, y_test)
+
+
+def plot_results(result_partitions, y_partitions, naive_partitions, directory, stocklist, y_type):
+    (result_train, result_val, result_test) = result_partitions
+    (y_train, y_val, y_test) = y_partitions
+    (naive_train, naive_val, naive_test) = naive_partitions
 
     y_axis_label = 'Change $' if y_type == 'next_change' else 'Price $'
 
@@ -291,28 +260,53 @@ def predict_plots(model, X_partitions, y_partitions, scaler_y, y_type, stocklist
            y_test[:, :(i + 1) * 25]], ['LSTM', 'Naive', 'True value'], ['Day', y_axis_label], start_at=i * 25) for i in
      range(6)]
 
-    if (y_type == 'next_change'):
-        (result_train, result_val, result_test), (y_train, y_val, y_test) = transform_from_change_to_price(result_train,
-                                                                                                           result_val,
-                                                                                                           result_test)
-        (_, naive_val, naive_test), _ = transform_from_change_to_price(naive_train, naive_val, naive_test)
 
-    train_evaluation = evaluate(result_train, y_train, 'next_price')
-    val_evaluation = evaluate(result_val, y_val, 'next_price')
-    test_evaluation = evaluate(result_test, y_test, 'next_price')
+def predict_plots(model,
+                  X_partitions,
+                  y_partitions,
+                  output_feature,
+                  reference_feature,
+                  scaler_y,
+                  stocklist,
+                  directory):
+    (result_train, result_val, result_test), (y_train, y_val, y_test) = predict(model,
+                                                                                X_partitions,
+                                                                                y_partitions,
+                                                                                scaler_y)
+    is_change = 'change' in output_feature
 
-    naive_val_evaluation = evaluate(naive_val, y_val, 'next_price')
-    naive_test_evaluation = evaluate(naive_test, y_test, 'next_price')
+    from src.baseline_models import naive_model
+    (naive_train, naive_val, naive_test) = naive_model(reference_feature if not is_change else None)
+
+    plot_results((result_train, result_val, result_test),
+                 (y_train, y_val, y_test),
+                 (naive_train, naive_val, naive_test),
+                 directory,
+                 stocklist,
+                 output_feature)
+
+    if (is_change):
+        (result_train, result_val, result_test), \
+        (y_train, y_val, y_test) = transform_from_change_to_price(result_train,
+                                                                  result_val,
+                                                                  result_test)
+        _, (naive_train, naive_val, naive_test), *_ = naive_model([reference_feature])
+
+    train_evaluation = evaluate(result_train, y_train, naive_train)
+    val_evaluation = evaluate(result_val, y_val, naive_val)
+    test_evaluation = evaluate(result_test, y_test, naive_test)
+
+    naive_val_evaluation = evaluate(naive_val, y_val, naive_val)
+    naive_test_evaluation = evaluate(naive_test, y_test, naive_test)
 
     print('Training:', train_evaluation[0])
     print('Val: ', val_evaluation[0])
     print('Test: ', test_evaluation[0])
-    print('Naive val: ', naive_val_evaluation[0])
-    print('Naive test: ', naive_test_evaluation[0])
 
     write_to_json_file(train_evaluation, f'{directory}/train_evaluation.json')
     write_to_json_file(val_evaluation, f'{directory}/val_evaluation.json')
     write_to_json_file(test_evaluation, f'{directory}/test_evaluation.json')
+
     write_to_json_file(naive_val_evaluation, f'{directory}/naive_val_evaluation.json')
     write_to_json_file(naive_test_evaluation, f'{directory}/naive_test_evaluation.json')
 

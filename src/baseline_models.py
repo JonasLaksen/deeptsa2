@@ -13,18 +13,12 @@ feature_list = ['price', 'high', 'low', 'open', 'volume', 'direction',
                 'trendscore']
 
 
-def naive_model(y_partitions, y_type):
-    y_train, y_val, y_test = y_partitions
-    y = np.concatenate((y_train, y_val, y_test), axis=1)
-    if y_type == 'next_price' or y_type == 'next_open':
-        return (y[:, :1, :],
-                y[:, y_train.shape[1] - 1: y_train.shape[1] + y_val.shape[1] - 1, :],
-                y[:, - y_test.shape[1] - 1:-1, :])
-    else:
-        result = np.zeros((y.shape[0], y.shape[1], 1))
-        return (result[:, :y_train.shape[1], :],
-                result[:, y_train.shape[1]:y_train.shape[1] + y_val.shape[1], :],
-                result[:, -y_test.shape[1]:, :])
+def naive_model(reference_feature):
+    _, (naive_train, naive_val, naive_test), *_ = load_data([], [reference_feature], False)
+    if (reference_feature == None):
+        return (np.zeros(naive_train.shape), np.zeros(naive_val.shape), np.zeros(naive_test.shape))
+
+    return (naive_train, naive_val, naive_test)
 
 
 def svm(X_train, X_test, y_train, y_test):
@@ -93,6 +87,9 @@ def main(y_type, on_test_set=False):
     (X_train, X_val, X_test), (y_train, y_val, y_test), _, scaler_y = load_data(feature_list, y_type, False)
 
     (_, result_val, result_test) = naive_model((y_train, y_val, y_test), y_type[0])
+    # da = direction_accuracy(y_val, price_val, price_val, y_type[0])
+    # print(da)
+    # return
     # result= naive_model(y_train, y_test, scaler_y, y_type[0])
     # result, y = linear_regression(X_train, X_test, y_train[:,:,0], y_test[:,:,0])
     # result, y = ridge_regression(X_train, X_test, y_train, y_test)
@@ -113,12 +110,10 @@ def main(y_type, on_test_set=False):
                                                                                           result_val, result_test)
         y_type = ['next_price']
 
-    evaluation_val = evaluate(result_val.reshape((result_val.shape[0], -1)), y_val.reshape((y_val.shape[0], -1)),
-                              y_type=y_type[0])
-    evaluation_test = evaluate(result_test.reshape((result_test.shape[0], -1)), y_test.reshape((y_test.shape[0], -1)),
-                                y_type=y_type[0])
-    # evaluation_test = evaluate(result_test.reshape((result_test.shape[0], -1)), y_test.reshape((y_test.shape[0], -1)),
-    #                            y_type=y_type[0])
+    _, (price_train, price_val, price_test), *_ = load_data([], ['price'], False)
+    evaluation_val = evaluate(result_val[:, :], y_val[:, :], price_val[:, :, 0], y_type=y_type[0])
+    evaluation_test = evaluate(result_test[:, :], y_test[:, :], price_test[:, :, 0], y_type=y_type[0])
+
     print(f'Val: {evaluation_val}')
     print(f'Test: {evaluation_test}')
     # print(f'Test: {evaluation_test}')
@@ -128,7 +123,8 @@ def main(y_type, on_test_set=False):
 def compare_with_model(y_types):
     result, y = main(y_types)
     with open(
-            'server_results/context_feature_search.py/2020-07-10_20.29.39/StackedLSTMWithState-160-2020-07-10_20.41.37/evaluation.json') as json_file:
+            'server_results/context_feature_search.py/2020-07-10_20.29.39/StackedLSTMWithState-160-2020-07-10_20.41'
+            '.37/evaluation.json') as json_file:
         json_content = json.load(json_file)
         context_search_results = json_content['validation']
     evaluation = evaluate(result.reshape((result.shape[0], -1)), y.reshape((y.shape[0], -1)), y_type=y_types[0])
@@ -138,7 +134,8 @@ def compare_with_model(y_types):
 def naive_next_price_using_next_open():
     X_train, y_train, X_test, y_test, y_dir, scaler_y = load_data(['next_open'], ['next_price'], .8, .1,
                                                                   should_scale_y=False)
-    # X_train, y_train, X_test, y_test, y_dir, scaler_y = load_data(['price'], [ 'next_open' ], .8, .1, should_scale_y=False)
+    # X_train, y_train, X_test, y_test, y_dir, scaler_y = load_data(['price'], [ 'next_open' ], .8, .1,
+    # should_scale_y=False)
     result = np.concatenate((X_train, X_test), axis=1)
     y = np.concatenate((y_train, y_test), axis=1)
     evaluation = (evaluate(result.reshape((result.shape[0], -1)), y.reshape((y.shape[0], -1)), y_type='next_price'))
