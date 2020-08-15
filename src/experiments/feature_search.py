@@ -6,7 +6,7 @@ from datetime import datetime
 import pandas
 import tensorflow as tf
 
-from src.features import price
+from src.features import all_features_with_price
 from src.models.stacked_lstm import StackedLSTM
 from src.utils import load_data, plot_one, write_to_json_file, predict_plots
 
@@ -96,7 +96,7 @@ def experiment_hyperparameter_search(
 n = 100000
 number_of_epochs = 1000000
 
-feature_subsets = [price]
+feature_subsets = all_features_with_price
 
 print(feature_subsets)
 for seed in range(3)[:n]:

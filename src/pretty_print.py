@@ -17,8 +17,7 @@ def print_for_master_thesis_compact(path, group_fields, sort_by=['sum_ranks'], f
         with open(evaluation_path, 'r') as json_file:
             evaluation = json.load(json_file)
 
-        subexperiments.append({'seed': meta['seed'],
-                               'layer': meta['layer-sizes'],
+        subexperiments.append({'layer': meta['layer-sizes'],
                                'dropout': meta['dropout'],
                                'loss': meta['loss'],
                                'features': meta['features'],
@@ -38,8 +37,8 @@ def print_for_master_thesis_compact(path, group_fields, sort_by=['sum_ranks'], f
         df[f'mean_{metric}'] = df[f'mean_{metric}'].transform(lambda x: f'{x:.4}' if x < 1000 else int(x))
 
     df['sum_ranks'] = df[[f'mean_{metric}_rank' for (metric, unit) in metrics]].sum(axis=1)
-    df = df.sort_values(sort_by + group_fields + ['seed'])
-    print(sort_by + group_fields + ['seed'])
+    df = df.sort_values(sort_by + group_fields)
+    print(sort_by + group_fields )
     list_of_rows = df.to_dict('records')
     list_of_groups = zip(*(iter(list_of_rows),) * group_size)
 
@@ -80,8 +79,7 @@ def print_for_master_thesis(path, group_fields, sort_by=['sum_ranks'], group_siz
         with open(evaluation_path, 'r') as json_file:
             evaluation = json.load(json_file)
 
-        subexperiments.append({'seed': meta['seed'],
-                               'layer': meta['layer-sizes'],
+        subexperiments.append({'layer': meta['layer-sizes'],
                                'dropout': meta['dropout'],
                                'loss': meta['loss'],
                                'features': meta['features'],
@@ -101,7 +99,7 @@ def print_for_master_thesis(path, group_fields, sort_by=['sum_ranks'], group_siz
         df[f'mean_{metric}'] = df[f'mean_{metric}'].transform(lambda x: f'{x:.4}' if x < 1000 else int(x))
 
     df['sum_ranks'] = df[[f'mean_{metric}_rank' for (metric, unit) in metrics]].sum(axis=1)
-    df = df.sort_values(sort_by + group_fields + ['seed'])
+    df = df.sort_values(sort_by + group_fields)
     list_of_rows = df.to_dict('records')
     list_of_groups = zip(*(iter(list_of_rows),) * group_size)
 
@@ -110,7 +108,7 @@ def print_for_master_thesis(path, group_fields, sort_by=['sum_ranks'], group_siz
     infinity = 'inf'
     for group in list_of_groups:
         output = f'''{', '.join([str(group[0][field]) for field in group_fields])} \\\\
-        {newline.join([f"{group[i]['seed']} & {' & '.join([f'{infinity if float( group[i][metric] ) > 1000000 else group[i][metric]}{unit}' for (metric, unit) in metrics])} {backslashes}"
+        {newline.join([f" & {' & '.join([f'{infinity if float( group[i][metric] ) > 1000000 else group[i][metric]}{unit}' for (metric, unit) in metrics])} {backslashes}"
                        for i in range(group_size)])}
         \midrule
         Mean & {' & '.join([f'{"inf" if float(group[0][f"mean_{metric}"]) > 1000000 else group[0][f"mean_{metric}"]}{unit}' for (metric, unit) in metrics])} \\\\

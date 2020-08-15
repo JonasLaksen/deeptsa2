@@ -1,0 +1,46 @@
+{
+    "dropout": 0.0,
+    "epochs": 1000000,
+    "time": "2020-08-15_21.01.24",
+    "features": "price",
+    "model-type": "StackedLSTM",
+    "layer-sizes": "[160]",
+    "loss": "mae",
+    "X-train-shape": [
+        15,
+        1328,
+        1
+    ],
+    "X-val-shape": [
+        15,
+        166,
+        1
+    ],
+    "y-train-shape": [
+        15,
+        1328,
+        1
+    ],
+    "y-val-shape": [
+        15,
+        166,
+        1
+    ],
+    "X-stocks": [
+        "AAPL",
+        "AMD",
+        "AMZN",
+        "BIDU",
+        "DIS",
+        "FB",
+        "HD",
+        "INTC",
+        "KO",
+        "NFLX",
+        "NVDA",
+        "PFE",
+        "QCOM",
+        "TSLA",
+        "WMT"
+    ]
+}
