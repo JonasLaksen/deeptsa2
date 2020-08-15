@@ -67,7 +67,7 @@ def experiment_hyperparameter_search(
                         epochs=epochs,
                         shuffle=False,
                         callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                                    patience=5000, restore_best_weights=True)]
+                                                                    patience=1000, restore_best_weights=True)]
                         )
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -93,8 +93,8 @@ def experiment_hyperparameter_search(
     write_to_json_file(meta, f'{directory}/meta.json', )
 
 
-n = 1
-number_of_epochs = 200
+n = 100000
+number_of_epochs = 1000000
 
 feature_subsets = [price]
 
