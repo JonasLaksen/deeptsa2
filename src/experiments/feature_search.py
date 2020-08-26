@@ -96,7 +96,7 @@ def experiment_hyperparameter_search(
 n = 100000
 number_of_epochs = 1000000
 
-feature_subsets = all_features_with_price
+feature_subsets = [['change', 'open_close_change', 'high_close_change', 'low_close_change']]
 
 print(feature_subsets)
 for seed in range(3)[:n]:
@@ -105,7 +105,7 @@ for seed in range(3)[:n]:
                                          dropout_rate=.0,
                                          loss_function='mae',
                                          epochs=number_of_epochs,
-                                         output_feature='next_open',
+                                         output_feature='next_change',
                                          reference_feature='price',
                                          input_features=list(OrderedDict.fromkeys(features)),
                                          model_generator=StackedLSTM)

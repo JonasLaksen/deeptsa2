@@ -14,10 +14,11 @@ feature_list = ['price', 'high', 'low', 'open', 'volume', 'direction',
 
 
 def naive_model(reference_feature):
-    _, (naive_train, naive_val, naive_test), *_ = load_data([], [reference_feature], False)
     if (reference_feature == None):
+        _, (naive_train, naive_val, naive_test), *_ = load_data([], ['price'], False)
         return (np.zeros(naive_train.shape), np.zeros(naive_val.shape), np.zeros(naive_test.shape))
 
+    _, (naive_train, naive_val, naive_test), *_ = load_data([], [reference_feature], False)
     return (naive_train, naive_val, naive_test)
 
 

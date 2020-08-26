@@ -133,6 +133,7 @@ def from_filename_to_args(filename):
 
 
 def load_data(feature_list, y_features, should_scale_y=True):
+
     data = pd.read_csv('dataset_v2.csv', index_col=0)
     data = data.dropna()
     # data = data[data['stock'] == 'AAPL']
@@ -141,7 +142,8 @@ def load_data(feature_list, y_features, should_scale_y=True):
     # data['all_neutral'] = data.groupby('date')['neutral'].sum()
     feature_list_element_not_in_dataset = set(feature_list) - set(data.columns.values)
     if (len(feature_list_element_not_in_dataset) > 0):
-        raise Exception(f'En feature ligger ikke i datasettet {feature_list_element_not_in_dataset}')
+        return None
+        print(f'En feature ligger ikke i datasettet {feature_list_element_not_in_dataset}')
 
     X = data['stock'].values.reshape(-1, 1)
 
@@ -216,7 +218,7 @@ def transform_from_change_to_price(change_train, change_val, change_test):
     return (result_train, result_val, result_test), (y_train, y_val, y_test)
 
 
-def predict(model, X_partitions, y_partitions, scaler_y):
+def predict(model, X_partitions, y_partitions, scaler_y, additional_data=[]):
     (X_train, X_val, X_test) = X_partitions
     (y_train, y_val, y_test) = y_partitions
 
@@ -225,7 +227,7 @@ def predict(model, X_partitions, y_partitions, scaler_y):
     y = np.concatenate((y_train, y_val, y_test), axis=1)
     y_inverse = scaler_y.inverse_transform(y)
 
-    result = model.predict([X])
+    result = model.predict([X] + additional_data)
     result_inverse = scaler_y.inverse_transform(result)
 
     result_train, result_val, result_test, *_ = np.split(result_inverse[:, :, :1],
@@ -268,11 +270,13 @@ def predict_plots(model,
                   reference_feature,
                   scaler_y,
                   stocklist,
-                  directory):
+                  directory,
+                  additional_data=[]):
     (result_train, result_val, result_test), (y_train, y_val, y_test) = predict(model,
                                                                                 X_partitions,
                                                                                 y_partitions,
-                                                                                scaler_y)
+                                                                                scaler_y, 
+                                                                                additional_data)
     is_change = 'change' in output_feature
 
     from src.baseline_models import naive_model
@@ -290,7 +294,7 @@ def predict_plots(model,
         (y_train, y_val, y_test) = transform_from_change_to_price(result_train,
                                                                   result_val,
                                                                   result_test)
-        _, (naive_train, naive_val, naive_test), *_ = naive_model([reference_feature])
+        (naive_train, naive_val, naive_test) = naive_model(reference_feature)
 
     train_evaluation = evaluate(result_train, y_train, naive_train)
     val_evaluation = evaluate(result_val, y_val, naive_val)

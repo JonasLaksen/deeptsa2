@@ -1,16 +1,16 @@
 import os
 import sys
-import pandas
-import tensorflow as tf
-import numpy as np
 from collections import OrderedDict
 from datetime import datetime
 
-from src.features import price_changes_today, trading_features_without_change, the_final_features, price, trading_features_with_price, trendscore_features, change
 from src.models.spec_network import SpecializedNetwork
+import numpy as np
+import pandas
+import tensorflow as tf
+
+from src.features import all_features_with_price
 from src.models.stacked_lstm import StackedLSTM
-from src.models.stacked_lstm_state import StackedLSTMWithState
-from src.utils import load_data, plot_one, predict_plots, write_to_json_file
+from src.utils import load_data, plot_one, write_to_json_file, predict_plots
 
 pandas.set_option('display.max_columns', 500)
 pandas.set_option('display.width', 1000)
@@ -24,24 +24,32 @@ experiment_timestamp = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
 experiment_results_directory = f'{folder}{os.path.basename(__file__)}/{experiment_timestamp}'
 
 
-def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_function, epochs, y_features, feature_list,
-                                     model_generator):
-    print(feature_list)
-    sub_experiment_timestamp = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
-    directory = f'{experiment_results_directory}/{model_generator.__name__}-{"-".join([str(x) for x in layer_sizes])}-{sub_experiment_timestamp}'
+def experiment_hyperparameter_search(
+        input_features,
+        output_feature,
+        reference_feature,
+        layer_sizes,
+        dropout_rate,
+        loss_function,
+        epochs,
+        model_generator):
 
-    (X_train, X_val, X_test), (y_train, y_val, y_test), X_stocks, scaler_y = load_data(feature_list, y_features)
+    print(input_features)
+    sub_experiment_timestamp = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
+    directory = f'{experiment_results_directory}/{model_generator.__name__}-' \
+                f'{"-".join([str(x) for x in layer_sizes])}-{sub_experiment_timestamp}'
+
+    (X_train, X_val, X_test), (y_train, y_val, y_test), X_stocks, scaler_y = load_data(input_features, [output_feature])
 
     n_features, batch_size = X_train.shape[2], X_train.shape[0]
     meta = {
         'dropout': dropout_rate,
         'epochs': epochs,
         'time': sub_experiment_timestamp,
-        'features': ', '.join(feature_list),
+        'features': ', '.join(input_features),
         'model-type': model_generator.__name__,
         'layer-sizes': f"[{', '.join(str(x) for x in layer_sizes)}]",
         'loss': loss_function,
-        'seed': seed,
         'X-train-shape': list(X_train.shape),
         'X-val-shape': list(X_val.shape),
         'y-train-shape': list(y_train.shape),
@@ -64,7 +72,7 @@ def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_funct
                              epochs=epochs,
                              shuffle=False,
                              callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                                         patience=5000, restore_best_weights=True)]
+                                                                         patience=1000, restore_best_weights=True)]
                              )
 
     if not os.path.exists(directory):
@@ -73,8 +81,9 @@ def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_funct
     predict_plots(spec_model,
                   (X_train, X_val, X_test),
                   (y_train, y_val, y_test),
+                  output_feature,
+                  reference_feature,
                   scaler_y,
-                  y_features[0],
                   X_stocks,
                   directory,
                   [stock_list])
@@ -91,27 +100,20 @@ def experiment_hyperparameter_search(seed, layer_sizes, dropout_rate, loss_funct
     write_to_json_file(meta, f'{directory}/meta.json', )
 
 
-configurations = [
-    {
-        'lstm_type': StackedLSTM,
-        'layers': [160]
-    },
-]
-
 n = 100000
 number_of_epochs = 1000000000
 
-feature_subsets = [change, change + trendscore_features, trading_features_with_price, change + ['positive']]
+feature_subsets = [['change', 'negative', 'neutral']]
 
 print(feature_subsets)
 for seed in range(3)[:n]:
     for features in feature_subsets[:n]:
-        for configuration in configurations:
-            experiment_hyperparameter_search(seed=seed,
-                                             layer_sizes=configuration['layers'],
-                                             dropout_rate=.0,
-                                             loss_function='mae',
-                                             epochs=number_of_epochs,
-                                             y_features=['next_change'],
-                                             feature_list=features,
-                                             model_generator=StackedLSTMWithState)
+        experiment_hyperparameter_search(layer_sizes=[160],
+                                         dropout_rate=.0,
+                                         loss_function='mae',
+                                         epochs=number_of_epochs,
+                                         output_feature='next_change',
+                                         reference_feature='price',
+                                         input_features=list(OrderedDict.fromkeys(features)),
+                                         model_generator=StackedLSTM)
+
